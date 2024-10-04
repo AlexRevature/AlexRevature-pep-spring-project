@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,8 @@ import com.example.entity.Message;
 
 import com.example.service.AccountService;
 import com.example.service.MessageService;
+
+import com.example.exception.*;
 
 import java.util.List;
 
@@ -41,9 +44,9 @@ public class SocialMediaController {
             if (persistedAccount != null) {
                 return ResponseEntity.status(200).body(existingUser);
             }
-            return ResponseEntity.status(400).build();
+            throw new ClientException();
         }
-        return ResponseEntity.status(409).build();
+        throw new ConflictException();
     }
 
     @PostMapping("/login")
@@ -52,21 +55,21 @@ public class SocialMediaController {
         if (authUser != null) {
             return ResponseEntity.status(200).body(authUser);
         }
-        return ResponseEntity.status(401).build();
+        throw new UnauthorizedException();
     }
 
     @PostMapping("/messages")
     public ResponseEntity createMessage(@RequestBody Message message) {
 
         if (message.getMessageText().length() > 255 || message.getMessageText().length() == 0) {
-            return ResponseEntity.status(400).build();
+            throw new ClientException();
         }
 
         Message persistedMessage = messageService.persistMessage(message);
         if (persistedMessage != null) {
             return ResponseEntity.status(200).body(persistedMessage);
         }
-        return ResponseEntity.status(400).build();
+        throw new ClientException();
     }
 
     @GetMapping("/messages")
@@ -97,20 +100,38 @@ public class SocialMediaController {
     public ResponseEntity patchMessages(@PathVariable int messageId, @RequestBody Message message) {
 
         if (message.getMessageText().length() > 255 || message.getMessageText().length() == 0) {
-            return ResponseEntity.status(400).build();
+            throw new ClientException();
         }
 
         Message updatedMessage = messageService.updateMessage(messageId, message.getMessageText());
         if (updatedMessage != null) {
             return ResponseEntity.status(200).body(1);
         }
-        return ResponseEntity.status(400).build();
+        throw new ClientException();
     }
 
     @GetMapping("/accounts/{accountId}/messages")
     public ResponseEntity getUserMessages(@PathVariable int accountId) {
         List<Message> allMessages =  messageService.getUserMessages(accountId);
         return ResponseEntity.status(200).body(allMessages);
+    }
+
+    @ExceptionHandler(ClientException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public @ResponseBody String handleBadRequest(RuntimeException ex) {
+        return null;
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public @ResponseBody String handleConflict(RuntimeException ex) {
+        return null;
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public @ResponseBody String handleUnauthorized(RuntimeException ex) {
+        return null;
     }
 
 }
